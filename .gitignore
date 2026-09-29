@@ -1,0 +1,23 @@
+/docs/IMPLEMENTATION_CHANGES.md
+# Local secrets
+.env
+.env.*
+
+# Keep the shareable template
+!.env.example
+
+# Python environments and generated files
+.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# Local logs and test fixtures
+logs/
+test/
+test.zip
+
+# Personal notes/scripts not meant for the repo
+first_chat.md
+hackathon.txt
+hello.txt

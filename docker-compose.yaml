@@ -1,0 +1,104 @@
+services:
+  
+  api:
+    build:
+      context: .
+      dockerfile: "./api/Dockerfile"
+    volumes:
+      - "./logs:/src/logs"
+    ports:
+      - "8000:8000"
+    networks:
+      - bytebattles_net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: always
+    env_file:
+      - .env
+  
+  judge:
+    build:
+      context: .
+      dockerfile: "./judge/Dockerfile"
+    volumes:
+      - "./logs:/src/logs"
+      - /var/run/docker.sock:/var/run/docker.sock # This helps run docker inside the container by mounting host's daemon to conatiner
+    networks:
+      - bytebattles_net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: always
+    env_file:
+      - .env
+  
+  postgres:
+    image: postgres:latest
+    volumes:
+      - "bytebattles_postgres:/var/lib/postgresql"
+    networks:
+      - bytebattles_net
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWD}
+      POSTGRES_DB: ${DB_DATABASE}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${DB_USER}", "-d", "${DB_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    
+  redis:
+    image: redis:latest
+    networks:
+      - bytebattles_net
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  
+  minio:
+    command: server /data
+    image: dipanshu115/bytebattles-minio:latest
+    volumes:
+      - "bytebattles_minio:/data"
+    networks:
+      - bytebattles_net
+    restart: always
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    ports:
+      - "9000:9000"
+      - "39069:39069"
+
+volumes:
+  bytebattles_postgres:
+    name: bytebattles_postgres
+    external: true
+  bytebattles_minio:
+    name: bytebattles_minio
+    external: true
+
+networks:
+  bytebattles_net:
